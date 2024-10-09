@@ -251,3 +251,6 @@ fabric.properties
 # End of https://www.toptal.com/developers/gitignore/api/node,visualstudiocode,webstorm+all
 
 dst/
+npm-debug.log
+.DS_Store
+/*.env

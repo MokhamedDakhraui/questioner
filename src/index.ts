@@ -7,14 +7,13 @@ import {
     IntentsBitField,
     TextChannel,
 } from "discord.js";
-import express, {Application, Request, Response} from 'express';
+import express, {Application, NextFunction, Request, Response} from 'express';
 import helmet from 'helmet';
 import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
 import {STATUS_CODES} from 'http';
-import timeout from 'connect-timeout'
 
-export const expressJsonErrorHandler = (err, req, res, _) => {
+export const expressJsonErrorHandler = (err: any, req: Request, res: Response, _: NextFunction) => {
     let status = err.status ?? err.statusCode ?? 500;
     if (status < 400) {
         status = 500;
@@ -43,12 +42,12 @@ export const expressJsonErrorHandler = (err, req, res, _) => {
     res.json(body);
 };
 
-function fail(error): never {
+function fail(error: any): never {
     console.error(error);
     throw new Error(error);
 }
 
-function assert(value, name): void | never {
+function assert(value: any, name: string): void | never {
     if (!value) {
         return fail(name + " is required.");
     }
@@ -80,12 +79,11 @@ function extractImagesFromDescription(description: string): {
 dotenv.config();
 
 const app: Application = express();
-// app.use(timeout('15s'));
 app.use(helmet());
 app.use(bodyParser.json());
 app.use(haltOnTimedOut);
 
-function haltOnTimedOut(req, res, next) {
+function haltOnTimedOut(req: Request, res: Response, next: NextFunction) {
     if (!req.timedout) {
         next();
     }
