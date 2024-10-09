@@ -1,0 +1,7 @@
+include:
+  - https://gitgud.io/madtisa/ci-templates/-/raw/master/templates/docker-build-template.yml
+
+variables:
+  REGISTRY: ''
+  REGISTRY_USER: 'cegok'
+  REGISTRY_IMAGE: 'cegok/gitgud-discord-bot'

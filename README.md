@@ -1,2 +1,3 @@
-# questioner
-Tool to structurize and memorise information
+# GitGud Bot Docker Image
+
+Docker image containing GitGud discord bot
