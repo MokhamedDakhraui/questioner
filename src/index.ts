@@ -103,6 +103,7 @@ app.get('/version', (request, response) => {
         version: '1.3.0',
         status: 'Running',
     };
+    console.log(`Requested status`, status);
     response.send(status);
 });
 
