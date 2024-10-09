@@ -8,10 +8,7 @@ import {
     TextChannel,
 } from "discord.js";
 import express, {Application, NextFunction, Request, Response} from 'express';
-import helmet from 'helmet';
-import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
-import {STATUS_CODES} from 'http';
 
 export const expressJsonErrorHandler = (err: any, req: Request, res: Response, _: NextFunction) => {
     let status = err.status ?? err.statusCode ?? 500;
@@ -26,12 +23,6 @@ export const expressJsonErrorHandler = (err: any, req: Request, res: Response, _
 
     if (process.env.NODE_ENV !== 'production') {
         body.stack = err.stack;
-    }
-
-    if (status >= 500) {
-        body.message = STATUS_CODES[status];
-        res.json(body);
-        return;
     }
 
     body.message = err.message ?? body.message;
@@ -79,8 +70,7 @@ function extractImagesFromDescription(description: string): {
 dotenv.config();
 
 const app: Application = express();
-app.use(helmet());
-app.use(bodyParser.json());
+app.use(express.json());
 app.use(haltOnTimedOut);
 
 function haltOnTimedOut(req: Request, res: Response, next: NextFunction) {
@@ -109,6 +99,8 @@ app.get('/version', (request, response) => {
 app.post(
     '/channel/:channel/topic/:topic/announce',
     async (request: Request, response: Response, next) => {
+        console.log('>> BODY', request.body);
+
         const {channel, topic} = request.params ?? {};
         const {
             // TODO: Rename to token.
