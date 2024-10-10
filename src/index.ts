@@ -10,6 +10,10 @@ import {
 import express, {Application, NextFunction, Request, Response} from 'express';
 import dotenv from 'dotenv';
 
+function isProductionEnvironment() {
+    return process.env.NODE_ENV === 'production'
+}
+
 export const expressJsonErrorHandler = (err: any, req: Request, res: Response, _: NextFunction) => {
     let status = err.status ?? err.statusCode ?? 500;
     if (status < 400) {
@@ -21,7 +25,7 @@ export const expressJsonErrorHandler = (err: any, req: Request, res: Response, _
         status,
     };
 
-    if (process.env.NODE_ENV !== 'production') {
+    if (!isProductionEnvironment()) {
         body.stack = err.stack;
     }
 
@@ -48,13 +52,16 @@ function isPrerelease(title: string): boolean {
     return title.indexOf('-pre') >= 0 || title.indexOf('-rc') >= 0;
 }
 
-function extractImagesFromDescription(description: string): {
+function extractImagesFromDescription(baseUrl: string, description: string): {
     text: string,
     images: AttachmentBuilder[]
 } {
     const images: AttachmentBuilder[] = [];
     const text = description.replace(/!\[([^\]\r\n]+)]\(([^)\r\n]+)\)/g, (str, description, url) => {
-        images.push(new AttachmentBuilder(url).setDescription(description));
+        images.push(
+            new AttachmentBuilder(new URL(url, baseUrl).toString())
+                .setDescription(description)
+        );
         description = 'image' + images.length + ':' + description;
         return `[${description}]`;
     });
@@ -67,22 +74,21 @@ function extractImagesFromDescription(description: string): {
     }
 }
 
-dotenv.config();
-
-const app: Application = express();
-app.use(express.json());
-app.use(haltOnTimedOut);
-
 function haltOnTimedOut(req: Request, res: Response, next: NextFunction) {
     if (!req.timedout) {
         next();
     }
 }
 
-const PORT = process.env.PORT || 3000;
+dotenv.config();
 
-const server = app.listen(PORT, () => {
-    console.log("Server listening on", PORT);
+const app: Application = express();
+app.use(express.json());
+app.use(haltOnTimedOut);
+
+const port = process.env.PORT || 3000;
+const server = app.listen(port, () => {
+    console.log("Server listening on", port);
 });
 server.requestTimeout = 5000;
 server.headersTimeout = 2000;
@@ -90,21 +96,23 @@ server.keepAliveTimeout = 3000;
 
 app.get('/version', (request, response) => {
     const status = {
-        version: '1.3.0',
+        version: '1.4.0',
         status: 'Running',
     };
     response.send(status);
 });
 
 app.post(
-    '/channel/:channel/topic/:topic/announce',
+    '/channel/:channel/topic/:topic/announcement',
     async (request: Request, response: Response, next) => {
-        console.log('>> BODY', request.body);
+        if (!isProductionEnvironment()) {
+            console.log('Request body', request.body);
+        }
 
         const {channel, topic} = request.params ?? {};
         const {
-            // TODO: Rename to token.
-            secret: token,
+            baseUrl,
+            token,
             title,
             link,
             author,
@@ -112,6 +120,7 @@ app.post(
         } = request.body ?? {};
 
         try {
+            assert(baseUrl, "Base url");
             assert(token, "Bot token");
             assert(channel, "Channel ID");
             assert(topic, "Topic ID");
@@ -138,7 +147,7 @@ app.post(
                         return fail(`Topic with id ${topic} not found`);
                     }
 
-                    const {text, images} = extractImagesFromDescription(description || '');
+                    const {text, images} = extractImagesFromDescription(baseUrl, description || '');
 
                     const embed = new EmbedBuilder()
                         .setTitle(title)
